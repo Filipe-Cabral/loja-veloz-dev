@@ -57,7 +57,7 @@ Subindo o ambiente
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/SEU_USUARIO/loja-veloz-devops.git
+git clone https://github.com/Filipe-Cabral/loja-veloz-devops.git
 cd loja-veloz-devops
 
 # 2. Configure variáveis de ambiente
