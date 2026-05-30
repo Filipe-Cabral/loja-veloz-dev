@@ -9,7 +9,7 @@
 
 Vídeo Pitch
 
-▶️ [Assista no YouTube](https://youtu.be/SEU_LINK_AQUI)
+▶️ [Assista no YouTube](https://youtu.be/Q9Vk2NhCWyc) 
 
 ---
 
