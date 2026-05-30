@@ -1,0 +1,138 @@
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loja-veloz
+  labels:
+    app: loja-veloz
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: loja-veloz
+data:
+  APP_ENV: "production"
+  DB_HOST: "postgres-svc"
+  DB_PORT: "5432"
+  DB_NAME: "lojaveloz"
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secret
+  namespace: loja-veloz
+type: Opaque
+data:
+  DB_USER: cG9zdGdyZXM=      
+  DB_PASSWORD: c2VuaGFfc2VndXJh 
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pedidos
+  namespace: loja-veloz
+  labels:
+    app: pedidos
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pedidos
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0          # zero downtime
+  template:
+    metadata:
+      labels:
+        app: pedidos
+        version: v1
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      containers:
+        - name: pedidos
+          image: ghcr.io/SEU_USUARIO/loja-veloz/pedidos:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+          envFrom:
+            - configMapRef:
+                name: app-config
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_PASSWORD
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: pedidos-svc
+  namespace: loja-veloz
+spec:
+  selector:
+    app: pedidos
+  ports:
+    - protocol: TCP
+      port: 3001
+      targetPort: 3001
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pedidos-hpa
+  namespace: loja-veloz
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pedidos
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
